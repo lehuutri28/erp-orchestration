@@ -1,109 +1,103 @@
 # PROGRESS — Tiến độ hệ ERP WECHA / Vua An Toàn
 
-> **Xương sống tiến độ + bàn giao session.** File này là nguồn tiến độ chính thức cho điều phối (kể cả mobile clone repo này về xem).
+> **Xương sống tiến độ + onboarding.** File này là nguồn tiến độ chính thức (kể cả mobile clone về xem).
 >
-> **Phiên bản:** 1.0 (dựng lại) | **Cập nhật:** 2026-06-29 | **Owner:** Lê Hữu Trí | **Người ghi:** CEO ERP (đọc & báo cáo)
+> **Phiên bản:** 2.0 (sửa lớn — audit đúng trunk) | **Cập nhật:** 2026-06-29 | **Owner:** Lê Hữu Trí | **Người ghi:** CEO ERP (đọc & báo cáo)
 >
-> 🔒 **0 secret** — IP VPS để dạng `<VPS_IP>`, KHÔNG chứa pass DB / token / key. Mobile cần IP thật để deploy → lấy từ phiên local, KHÔNG để trên GitHub.
->
-> 📌 **Nguồn dữ liệu:** Audit thực tế 5 repo ngày 2026-06-29 (verify bằng `ls/grep/git/wc`) + `erp-wecha-pos/docs/TASK-LOG.md` + `docs/wiki/SYSTEM-SNAPSHOT-20260416.md` + `api-google-appscript-vps/orchestrator-ceo/ceos/handovers/`. Mọi con số có công thức + verify icon (📖 đọc / 🔍 grep / 🖥 chạy lệnh).
+> 🔒 **0 secret** — IP VPS để `<VPS_IP>`, không pass DB/token/key. Mobile cần IP thật để deploy → lấy từ phiên local, KHÔNG để GitHub.
 
 ---
 
-## 1. TỔNG QUAN 5 REPO
+## 0. ONBOARDING (đọc đầu tiên)
 
-| Repo | Bản chất | Tiến độ | Trạng thái |
-|---|---|---|---|
-| **erp-wecha-pos** | Code CHÍNH (ERP/POS) | Rộng ~78%, chất lượng ~25–35% | ⚠️ Chạy prod nhưng hổng phi-chức-năng |
-| **webphache** | Bundle tích hợp phache.com.vn | Phase A ~83% code, deploy 0% | ⚠️ Soạn sẵn, chưa deploy |
-| **api-google-appscript-vps** | Điều phối CEO con + docs + infra script | Governance đủ; KHÔNG chứa code app | ✅ Đúng thiết kế |
-| **erp-orchestration** | Hiến pháp / governance | 100% docs, 0 code (cố ý) | ✅ Đúng thiết kế |
-| **c10-erp-wecha** | Repo rỗng | 0% (0 commit / 0 file) | ❌ Chưa bắt đầu |
+```bash
+# Code thật của hệ ERP nằm ở TRUNK này (KHÔNG phải main):
+git clone -b n8n/005-wecha-pos-zalo-keypos git@github.com:lehuutri28/erp-wecha-pos.git
+# + đọc file này (docs/PROGRESS.md, repo erp-orchestration) để biết tiến độ
+```
+
+> ⚠️ **TRUNK THẬT = branch `n8n/005-wecha-pos-zalo-keypos`** (sửa hằng ngày). Branch `main` ĐÃ LẠC HẬU XA (~67 module cũ) — đừng audit `main`.
+> ⛔ **KHÔNG đọc `api-google-appscript-vps/orchestrator-ceo/` (C1–C18):** đó là **kế hoạch lịch sử**, KHÔNG phải code deployed → đọc sẽ hiểu sai tiến độ.
+> 📌 Số liệu dưới đây verify bằng `git ls-tree / git grep` trên `origin/n8n/005-wecha-pos-zalo-keypos` ngày 2026-06-29 (📖 đọc / 🔍 grep / 🖥 lệnh).
 
 ---
 
-## 2. erp-wecha-pos — REPO CHÍNH
+## 1. HIỆN TRẠNG TRUNK `n8n/005` (số thật)
 
-### ✅ Đã có (code thật, đang chạy production: erp.wecha.vn / pos.vuaantoan.com — VPS `<VPS_IP>`)
+| Chỉ số | Giá trị | Verify |
+|---|---|---|
+| Module backend (NestJS) | **169** | 🔍 `ls-tree apps/api/src/modules` |
+| Controller | **244** | 🔍 đếm `*.controller.ts` |
+| Schema file | **210** | 🔍 `ls-tree database/schema` |
+| Migration | **~431** (mã tới `0431`, 659 file .sql) | 🔍 đếm `.sql` |
+| Trang web (Next.js) | **565** | 🔍 đếm `page.tsx` |
+| n8n workflow | **40** | 🔍 `ls-tree n8n` |
 
-| Thành phần | Verify |
-|---|---|
-| 67 module NestJS = 32,714 LOC (orders 782, payments 866, manufacturing 773…) | 🔍 `ls apps/api/src/modules` = 67 |
-| 176 trang Next.js = 51,262 LOC (admin/hr/kho/pos/crm/einvoice…) | 🔍 `find apps/web -name page.tsx` = 176 |
-| 52 schema + 29 migration SQL (0000→0029), PK=uuid, tenant_id=uuid | 🔍 `ls schema` / `ls migrations` |
-| 9 n8n workflow | 🔍 `ls n8n/workflows` = 9 JSON |
-| Tích hợp Shopee/Lazada/Tiki + VNPay/MoMo + GHN/GHTK + HĐĐT | 📖 modules platform-*/payment-gateway/shipping-adapters/einvoice |
-| Stack khớp CLAUDE.md: NestJS 10.4 + Drizzle 0.38 + pg-boss 10.1 + Next 14.2 | 📖 package.json |
+> 📌 So với báo cáo cũ (audit nhầm `main`): 67→**169** module, 29→**~431** migration, 176→**565** trang. Hệ lớn hơn nhiều và nhiều gap đã được vá.
 
-**📐 % chiều rộng:** 67/86 module = **78%** | 22 phân hệ nghiệp vụ tự báo hoàn thành (snapshot 16/04).
+---
 
-### 🔴 Hổng nặng phi-chức-năng (vi phạm rule CRITICAL)
+## 2. TRẠNG THÁI CÁC GAP PHI-CHỨC-NĂNG (trên trunk)
 
 | Hạng mục | Trạng thái | Công thức / Verify |
 |---|---|---|
-| RLS Postgres (Rule 02) | ❌ chưa có | 🔍 grep `ROW LEVEL SECURITY` = **0/20 bảng** |
-| Soft-delete + thùng rác (Contract mục 1) | ❌ chưa có | 🔍 grep `deleted_at` schema = **0** |
-| RBAC `@RequirePermissions` (Rule 20) | ⚠️ chưa đủ | **8/66 controller = 12%**; 56 còn lại chỉ JwtAuthGuard |
-| Test (Rule 06 target 80%) | ❌ chưa có | **2 spec / ~145 file = ~1%** |
-| Security `main.ts` (Rule 01 A05) | ❌ chưa có | thiếu helmet, rate-limit, CORS hardcode, Swagger không guard |
-| Password hash | ⚠️ chưa đủ | bcrypt (target argon2id), chưa 2FA TOTP |
-| CI/CD | ❌ chưa có | `.github` không tồn tại |
-| Outbox event (Rule 14) | ⚠️ chưa đủ | EventEmitter in-memory, mất nếu crash |
+| RLS Postgres (Rule 02) | ⚠️ đang làm | 🔍 **24 migration** có `ROW LEVEL SECURITY` (trước = 0) |
+| Soft-delete (Contract mục 1) | ⚠️ đang làm | 🔍 **73/210 schema = 35%** có `deletedAt` |
+| RBAC `@RequirePermissions` (Rule 20) | ⚠️ đang làm | 🔍 **88/244 controller = 36%**; commit hôm nay đang fix thêm 65 gap Rule-20 |
+| helmet (Rule 01 A05) | ✅ có | 🔍 `main.ts` có `helmet` |
+| Password hash | ⚠️ chưa đủ | 🔍 vẫn **bcrypt** (argon2 = 0 file); chưa 2FA TOTP (otplib = 0) |
+| Test (Rule 06) | ❌ chưa đủ | 🔍 **21 spec / 244 controller ≈ 9%**; **0 E2E/Playwright** |
+| CI/CD | ❌ chưa có | 🔍 `.github/workflows` = 0 |
 
-> 📐 **Tuân thủ rule production-grade ước ~25–35%.** Làm được nhiều tính năng, nhưng chưa "cứng" về bảo mật / đa-tenant / test theo hiến pháp.
-
----
-
-## 3. webphache — Tích hợp phache.com.vn ↔ ERP
-
-- ✅ **Phase A** (đẩy lead web→CRM): `CrmClient.php` 419 dòng (circuit breaker + retry + JWT rotate) + **test PASS 77/0 assertion** 🖥. Code chất lượng cao, PHP 5.6-compat.
-- ⚠️ **Phase B**: chỉ có CSS + auto-fill + courses-list. **Chatbot AI (mục tiêu gốc dự án) = 0 file** 🔍 grep=0.
-- ❌ **Chưa deploy**: A.4 wrap form chưa apply (mốc 12/5), `.env` còn placeholder, JS/CSS chưa nhúng vào site.
-
-> 📐 Code soạn sẵn ~70–75%, đã-tích-hợp-vào-site = **0%**.
+> 📐 Bảo mật/đa-tenant đã khá hơn nhiều so với báo cáo cũ, nhưng RLS/soft-delete/RBAC **mới phủ ~35%**, còn lại đang cuốn chiếu (ĐỢT 3 đang chạy hôm nay).
 
 ---
 
-## 4. 2 repo GOVERNANCE + 1 repo rỗng
+## 3. CÁI GÌ CHƯA DEPLOY
 
-- **api-google-appscript-vps**: tên gây hiểu nhầm — KHÔNG có code bridge AppScript (🔍 `find *.gs`=0). Thực chất là repo điều phối CEO con (C1–C11) + TASK_LOG (8,700 dòng) + monitoring scripts. Code ERP thật ở repo riêng `claude/pos-system` (bị .gitignore).
-- **erp-orchestration** (repo này): hiến pháp đầy đủ — **21 rule + 16 skill + ARCHITECTURE_CONTRACT** = 42 file `.md`, 0 code (cố ý). Governance ~100%.
-- **c10-erp-wecha**: ❌ **0%** — git ls-files=0, 0 commit, working tree chỉ có `.git/`.
+> Theo chính commit mới nhất trên trunk (29/6):
 
----
+1. **ĐỢT 3 sales read-filter + 5 worker fix 65 gap Rule-20 + bulk** — commit `173a57b7` tự ghi *"CHƯA build/review/deploy"*.
+2. **Migration `0430` (backfill) + `0431`** (chuẩn hoá cột 46 bảng giao dịch) — *"CHỜ apply"* lên DB.
+3. **42 branch `feat/*` chưa merge** vào trunk/main (admin-service-tokens, approval-engine-bpm, audit-log-immutable, bank-reconciliation, inventory-lots-fefo, loyalty-voucher… mỗi nhánh +200–600 commit). → cần xác nhận: đã gom vào `n8n/005` chưa hay còn rời.
+4. **Toàn bộ `webphache`** (tích hợp phache.com.vn): Phase A code+test xong nhưng A.4 wrap chưa apply, `.env` placeholder, chatbot AI 0 file → **0% deployed**.
 
-## 5. KẾ HOẠCH CODE TIẾP THEO
-
-> Ưu tiên theo mức độ rule (🔴 trước). Nguồn: gap đã verify + `nextSteps` trong TASK_LOG/handoff thật.
-
-### 🔴 ĐỢT 1 — "Cứng hoá" hệ chính erp-wecha-pos (nợ kỹ thuật CRITICAL)
-1. **Bật RLS 20 bảng** (Rule 02). Bắt đầu: `orders, order_items, payments, invoices, customers`. Mỗi bảng: `ENABLE + FORCE RLS` + policy `tenant_isolation` + `service_role_bypass`.
-2. **Soft-delete 3 cấp + thùng rác** (Contract mục 1): thêm `deletedAt/deletedBy/deletedReason/version` vào 52 schema + helper `notDeleted()`.
-3. **Phủ `@RequirePermissions` cho 56 controller còn lại** (Rule 20). ⚠️ *Cạm bẫy: seed quyền + gán policy TRƯỚC khi thêm guard, kẻo khoá NV 403.*
-4. **Security `main.ts`** (Rule 01 A05): helmet + `@nestjs/throttler` rate-limit + CORS từ env + guard Swagger theo `NODE_ENV`.
-
-### 🟠 ĐỢT 2 — Hoàn thiện dở dang (từ handoff thật)
-5. Fix **BUG-002** (inventory không emit event) + **BUG-003** (payments tính lại công nợ) — `erp-wecha-pos/docs/wiki/BUGS-ACTIVE.md`.
-6. Gỡ blocker **C4 MISA migration 0060–0067** (đang BLOCKED do branch merge dở + .gitignore chặn *.sql) — `api-google-appscript-vps/orchestrator-ceo/TASK_LOG.md`.
-7. Apply migration **0043 / 0048 / 0052** lên prod + thay mock data dashboard/MRP/cost bằng API thật. Resolve xung đột số migration 0043 (C1 vs C10).
-8. **webphache**: apply A.4 wrap (form→ERP) + nhúng JS/CSS + code **chatbot AI** (ChatWidget/chatbot.php/ClaudeClient/KnowledgeBase + bảng chat_session/chat_message).
-
-### 🟡 ĐỢT 3 — Nền tảng
-9. CI/CD (lint+typecheck+test+security-scan) → tăng test coverage (hiện ~1%) → migrate argon2id + 2FA TOTP → Outbox pattern cho event.
+> ❓ **Branch production thực tế:** chưa xác định chính xác (không vào được server). Trunk `n8n/005` là mới nhất nhưng WIP cuối "chưa deploy". Cần Letri xác nhận điểm deploy.
 
 ---
 
-## 6. ⚠️ ĐIỂM CẦN XÁC NHẬN (chưa kết luận)
+## 4. KẾ HOẠCH CODE TIẾP THEO
 
-1. **❓ Lệch số liệu repo:** Handover 26/4 báo hệ thật **86 module / 279 bảng / 91 migration**, nhưng `erp-wecha-pos` truy cập được chỉ có **67 module / 29 migration**. → `erp-wecha-pos` có thể là snapshot cũ/một phần; bản đầy đủ ở `claude/pos-system` (ngoài 5 repo được cấp quyền). **Cần chốt repo nào là source-of-truth.**
-2. **❓ Doc tiến độ cũ mâu thuẫn:** `erp-wecha-pos/docs/TIEN-DO-DU-AN.md` vẫn ghi 0/31 (stale 09/04) trong khi snapshot 16/04 báo ~đầy đủ.
+### 🔴 ĐỢT 1 — Đóng nốt nền tảng đang cuốn chiếu (trên trunk n8n/005)
+1. **RBAC Rule-20:** phủ nốt 156/244 controller chưa có `@RequirePermissions` (hiện 88/244). *Cạm bẫy: seed quyền + gán policy TRƯỚC, kẻo 403.*
+2. **RLS + soft-delete:** mở rộng từ ~35% lên đủ 20 bảng nghiệp vụ ưu tiên + 210 schema.
+3. **Apply migration `0430/0431`** (backup DB + test staging trước — Rule 03/12).
+4. **Build + review + deploy ĐỢT 3** (đang WIP).
+
+### 🟠 ĐỢT 2 — Gom nợ tích hợp
+5. Merge/đối soát **42 branch feat** về trunk (tránh trôi mỗi nhánh +200 commit).
+6. **webphache:** apply A.4 wrap + nhúng JS/CSS + code chatbot AI.
+
+### 🟡 ĐỢT 3 — Hardening
+7. **CI/CD** (lint+typecheck+test+security-scan) → tăng test (hiện ~9%, 0 E2E) → **argon2id + 2FA TOTP** → Outbox pattern.
 
 ---
 
-## 7. 🔚 BÀN GIAO CHO SESSION SAU
+## 5. CÁC REPO KHÁC (tóm tắt)
 
-- **Vừa làm:** Audit 5 repo (verify file thật) + dựng lại `docs/PROGRESS.md` (file này), IP scrub `<VPS_IP>`.
-- **Dừng tại:** `erp-orchestration/docs/PROGRESS.md` (đã commit branch `claude/ceo-erp-reading-reporting-344rb1`).
-- **Bước tiếp theo CHÍNH XÁC:** Bắt ĐỢT 1.1 — viết migration `ENABLE ROW LEVEL SECURITY` cho `orders` (mẫu ở `.claude/rules/02-multi-tenant.md` mục "Migration template enable RLS") trong repo `erp-wecha-pos`.
-- **Cạm bẫy cần nhớ:** Thêm RBAC guard phải seed quyền TRƯỚC (kẻo 403). Apply migration phải backup DB + test staging trước (Rule 03/12).
-- **Hệ khác cần biết:** IP thật `157.x.x.x` còn nằm trong ~29 file đã track của repo `api-google-appscript-vps` — cần scrub nếu repo đó push public.
+| Repo | Vai trò | Trạng thái |
+|---|---|---|
+| **erp-orchestration** (repo này) | Hiến pháp + 21 rule + 16 skill + Contract | ✅ governance đủ, 0 code (cố ý) |
+| **api-google-appscript-vps** | Điều phối CEO con + docs lịch sử (C1–C18) | ⚠️ KHÔNG phải code deployed — **đừng dùng để đo tiến độ** |
+| **webphache** | Tích hợp phache.com.vn | ⚠️ Phase A xong, chưa deploy |
+| **c10-erp-wecha** | — | ❌ rỗng (0 commit) |
+
+---
+
+## 6. 🔚 BÀN GIAO CHO SESSION SAU
+
+- **Vừa làm:** Phát hiện trunk thật là `n8n/005-wecha-pos-zalo-keypos` (main đã chết); audit lại số thật (169 module/~431 mig/565 trang); sửa `PROGRESS.md` v2.0.
+- **Dừng tại:** `erp-orchestration/docs/PROGRESS.md` (commit branch `claude/ceo-erp-reading-reporting-344rb1`).
+- **Bước tiếp theo CHÍNH XÁC:** clone trunk `n8n/005`, chạy audit đầy đủ 169 module → đối chiếu RBAC 156 controller còn thiếu quyền (danh sách = 244 controller trừ 88 đã có `@RequirePermissions`).
+- **Cạm bẫy:** ĐỪNG audit `main` (lạc hậu). ĐỪNG đọc orchestrator-ceo C1–C18 (kế hoạch lịch sử). Apply mig phải backup + staging trước.
+- **Hệ khác cần biết:** mig `0430/0431` CHỜ apply; ĐỢT 3 sales WIP chưa build/deploy; 42 branch feat chưa rõ đã gom trunk chưa.
