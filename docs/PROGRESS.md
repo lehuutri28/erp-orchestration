@@ -209,7 +209,8 @@
 > **✅ BATCH 1 LIVE 30/6 22:49 — prod=`ad7a072f`** tag `batch1-security-csdl-live-20260630-2249`, push erp-wecha-pos. Gồm: **Đợt 1 Mua hàng** (vá 6 controller hở quyền duyệt PO/hoá đơn, mig 0432+0433) + **Đợt 2 Kho** (ẩn giá vốn 4 đường theo `inventory.view_cost` + 9 gate + middleware validate tenant, mig 0434+0435) + TOP 1-3 stub. 4 migration ĐÃ apply prod (Letri), lockout verify an toàn, NV login lại. Trước đó prod=831c1bee.
 > **🌙 ĐÊM 30/6 — Opus tự chủ XONG BATCH 2: vá nốt 3/5 lỗ hổng bảo mật. SÁNG MAI LETRI DEPLOY (xem "DEPLOY BATCH 2" dưới).**
 > ✅ **5/5 LỖ HỔNG BẢO MẬT ĐÃ VÁ** (Batch1 LIVE + Batch2 chờ deploy): mua hàng(duyệt PO) · kho(giá vốn) · **HR(lộ lương/PII)** · **LMS(courses)** · **sàn TMĐT(leak api_key)**.
-> - **Batch 2 = 3 commit (chưa deploy, đã push GitHub e47dcf5a, api tsc PASS, reviewer 3 đợt PASS):**
+> - **Batch 2 = 4 commit (chưa deploy, push GitHub `58911c1c`, api tsc PASS, reviewer 4 đợt PASS, mig 0436-0439):**
+>   - `58911c1c` **Đợt 3 P1 HR** (1/7): gate 8 controller HR còn lại (attendance/kpi/competency/rewards/leave/overtime/business-trip) + recruitment dot-format. SELF-key (NV tự xin nghỉ/tăng ca/chấm công mình) vs quản-lý-key. Fix IDOR chấm công/submit-task (ownership tầng service). mig **0439**. → **HR GATE XONG HOÀN TOÀN.**
 >   - `548c3c4c` **Đợt 3 HR P0**: gate 8 controller (hr-salary/salary-3p/payroll/payslips/bhxh/employees/contracts/employee-advances) — trước đó tải phiếu lương bất kỳ NV/xem CCCD/duyệt chi lương đều 0 quyền. `payslip.me`+`employee.me` self-key mọi NV. mig **0436**. Reviewer bắt 2 controller sót (contracts/advances) → đã vá.
 >   - `4ac08bb2` **Đợt 4 LMS**: gate courses.controller 11 endpoint (enroll/tạo khoá/duyệt HV) bằng key courses.* reuse. mig **0437**. Public phache enrollment (HMAC) KHÔNG đụng.
 >   - `e47dcf5a` **Đợt 5 Sàn TMĐT**: OMIT secret (api_key/secret/token) khỏi mọi response sales-channels/shopee/lazada/tiki + gate platform.* (bonus: fix Shopee lockout sẵn) + Tiki webhook timingSafeEqual. mig **0438**. Reviewer bắt 3 disconnect sót `.returning` trần lộ secret → đã vá.
@@ -219,7 +220,7 @@
 > ### 🚀 DEPLOY BATCH 2 (Letri sáng mai — apply 3 migration TRƯỚC, không là NV 403):
 > ```
 > cd /Users/letri/Projects/erp-project/claude/pos-system/apps/api/src/database/migrations
-> for m in 0436_seed_hr_salary_pii_perms 0437_seed_courses_perms 0438_seed_ecommerce_platform_perms; do
+> for m in 0436_seed_hr_salary_pii_perms 0437_seed_courses_perms 0438_seed_ecommerce_platform_perms 0439_seed_hr_p1_perms; do
 >   echo "=== $m ==="; ssh root@<VPS_IP> "sudo -u postgres psql -p 5433 pos_db -v ON_ERROR_STOP=1" < "$m.sql" || break
 > done
 > cd /Users/letri/Projects/erp-project && bash scripts/safe-deploy.sh n8n/005-wecha-pos-zalo-keypos
