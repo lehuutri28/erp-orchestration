@@ -207,9 +207,24 @@
 > **🤖 ANTIGRAVITY 5 TÀI KHOẢN GOOGLE PRO (đề xuất, chờ Letri duyệt phân tuyến):** tận dụng token 5 acc Gemini cho **FE/UI rủi-ro-thấp + 3 website** (song song 5 luồng, mỗi acc 1 nhóm file/branch riêng). 🔴 TUYỆT ĐỐI KHÔNG giao BE/migration/quyền/RLS/tài chính (Claude làm) · mọi output → **Opus QC grep-verify TRƯỚC deploy** · ràng buộc `ANTIGRAVITY-CODING-CONTRACT.md`. Việc thử đầu: 3 website.
 >
 > **✅ BATCH 1 LIVE 30/6 22:49 — prod=`ad7a072f`** tag `batch1-security-csdl-live-20260630-2249`, push erp-wecha-pos. Gồm: **Đợt 1 Mua hàng** (vá 6 controller hở quyền duyệt PO/hoá đơn, mig 0432+0433) + **Đợt 2 Kho** (ẩn giá vốn 4 đường theo `inventory.view_cost` + 9 gate + middleware validate tenant, mig 0434+0435) + TOP 1-3 stub. 4 migration ĐÃ apply prod (Letri), lockout verify an toàn, NV login lại. Trước đó prod=831c1bee.
-> **🌙 ĐÊM 30/6 — Letri ngủ, Opus tự chủ chạy tiếp (làm hết tuần tự, không chờ nhắc):**
-> - **Đợt 3 HR (P0 — đang code)**: audit xong → **lỗ hổng PII/lương NẶNG** (quyền HR chỉ 4/26=15%): `hr-payslips GET :id/pdf` tải phiếu lương BẤT KỲ NV · `hr-employees` lộ CCCD/STK/mã thuế · `hr-salary/salary-3p` lộ số lương · `hr-payroll approve` duyệt chi lương — tất cả 0 quyền. Đang vá 6 controller P0 (worker-opus, key HR TOÀN MỚI → seed Giám đốc/Kế toán/Manager TRƯỚC + `hr.payslip.view.self` cho mọi NV chống lockout). Audit chi tiết + key đề xuất + bảng thiếu cột: xem kết quả agent HR.
-> - **Tiếp theo đêm**: Đợt 3 P1 (gate attendance/contracts/kpi/leave/overtime + sửa `hr_recruitment.*`→dot) → Đợt 4 LMS (courses 0 guard) → Đợt 5 Sàn TMĐT (leak api_key sales-channels). Mỗi đợt verify-first + lockout-check prod + reviewer + test local + commit → **Batch 2 sẵn cho Letri deploy sáng mai**.
+> **🌙 ĐÊM 30/6 — Opus tự chủ XONG BATCH 2: vá nốt 3/5 lỗ hổng bảo mật. SÁNG MAI LETRI DEPLOY (xem "DEPLOY BATCH 2" dưới).**
+> ✅ **5/5 LỖ HỔNG BẢO MẬT ĐÃ VÁ** (Batch1 LIVE + Batch2 chờ deploy): mua hàng(duyệt PO) · kho(giá vốn) · **HR(lộ lương/PII)** · **LMS(courses)** · **sàn TMĐT(leak api_key)**.
+> - **Batch 2 = 3 commit (chưa deploy, đã push GitHub e47dcf5a, api tsc PASS, reviewer 3 đợt PASS):**
+>   - `548c3c4c` **Đợt 3 HR P0**: gate 8 controller (hr-salary/salary-3p/payroll/payslips/bhxh/employees/contracts/employee-advances) — trước đó tải phiếu lương bất kỳ NV/xem CCCD/duyệt chi lương đều 0 quyền. `payslip.me`+`employee.me` self-key mọi NV. mig **0436**. Reviewer bắt 2 controller sót (contracts/advances) → đã vá.
+>   - `4ac08bb2` **Đợt 4 LMS**: gate courses.controller 11 endpoint (enroll/tạo khoá/duyệt HV) bằng key courses.* reuse. mig **0437**. Public phache enrollment (HMAC) KHÔNG đụng.
+>   - `e47dcf5a` **Đợt 5 Sàn TMĐT**: OMIT secret (api_key/secret/token) khỏi mọi response sales-channels/shopee/lazada/tiki + gate platform.* (bonus: fix Shopee lockout sẵn) + Tiki webhook timingSafeEqual. mig **0438**. Reviewer bắt 3 disconnect sót `.returning` trần lộ secret → đã vá.
+> - **🔴 LOCKOUT đã verify prod thật từng đợt** (role có user Giám đốc/Admin/Kế toán viên/NV BH Online đều phủ; seed TRƯỚC guard). Role 'Kế toán trường' (typo) ĐÚNG với prod.
+> - **DEFER (fast-follow, ghi không sót):** HR audit-log truy cập lương/PII (3 điểm: pdf/PII/bhxh-export) · FE gate-nút HR/LMS/sàn (Rule20 trục3 — BE đã chặn, FE chỉ ẩn nút) · Shopee getConfig SELECT*(internal) · online-orders COUNT+1→sequence · Đợt 3 P1 (HR attendance/kpi/leave/overtime còn 0 guard) · Đợt 6-9 (SX/KH-SP/Marketing/Lõi).
+>
+> ### 🚀 DEPLOY BATCH 2 (Letri sáng mai — apply 3 migration TRƯỚC, không là NV 403):
+> ```
+> cd /Users/letri/Projects/erp-project/claude/pos-system/apps/api/src/database/migrations
+> for m in 0436_seed_hr_salary_pii_perms 0437_seed_courses_perms 0438_seed_ecommerce_platform_perms; do
+>   echo "=== $m ==="; ssh root@<VPS_IP> "sudo -u postgres psql -p 5433 pos_db -v ON_ERROR_STOP=1" < "$m.sql" || break
+> done
+> cd /Users/letri/Projects/erp-project && bash scripts/safe-deploy.sh n8n/005-wecha-pos-zalo-keypos
+> ```
+> → YES DEPLOY. Sau deploy: **NV đăng nhập lại** (quyền trong JWT). Test: NV thường vào HR lương/sàn TMĐT → 403; tải phiếu lương người khác → 403; response sàn KHÔNG còn api_key.
 >
 > **⏳ CHỜ LETRI (việc lớn, không tự quyết):** (1) Set hạ tầng web-wecha (Cách A Postgres riêng — ĐÃ duyệt, chưa làm) + API ERP↔web (read-only + nhận CRM, dùng chung web-wecha/nguyenlieuantoan/phache). (2) Phân tuyến Antigravity 5 acc (FE 3 website). (3) suppliers/HR CSDL G4 (bật lọc database_id diện rộng). (4) Đổi pass DB + confirm repo private.
 > **Bước tiếp khi được duyệt:** Đợt 1 Mua hàng (Opus, seed quyền+gán policy TRƯỚC, +CSDL filter PR/returns/reports, migration purchase_returns ADD database_id) → reviewer 3 vòng (tiền/IDOR/tenant) → test local Mac → trình deploy.
