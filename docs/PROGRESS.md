@@ -185,14 +185,33 @@
 - **Cạm bẫy:** GAS cross-origin iframe — không test automation được. Letri/Anh Tuấn phải test tay: mở POS → bấm nút xoá trên 1 trong 5 trang → phải thấy Glass dialog (KHÔNG phải native browser confirm). Nếu modal không hiện: `ApiClientJs.html:406` `function glassConfirm` phải tồn tại.
 - **Hệ khác cần biết:** Không thay đổi BE VPS. Chỉ GAS FE. `pm2 restart phache-api` (KHÔNG phải `pos-api`).
 
-### 🏁 BÀN GIAO MỚI NHẤT ⏰ 2026-06-30 tối (KẾ HOẠCH LỚN: CSDL+chi nhánh+quyền TOÀN HỆ + quyền-riêng-từng-ổ)
-> **🎯 DIRECTIVE LETRI (30/6 tối — ưu tiên CAO NHẤT):** Hoàn thiện **load theo CSDL + chi nhánh + quyền cho MỌI hệ/trang/nút/bảng** (Rule 20). Bảng phải có `database_id` + `branch_id` + quyền. **Chia việc THẬT KỸ, code thật kỹ, KHÔNG để thiếu sót, KHÔNG để Letri nhắc lại.** Luôn báo cáo tiến độ còn thiếu → hoàn thiện MỚI deploy 1 lần. **Test local Mac kỹ (api tsc + web build + click-test) rồi mới deploy.** Mô hình quyền chốt: **QUYỀN RIÊNG TỪNG Ổ (như MISA)** — user quyền khác nhau mỗi ổ.
-> **Trạng thái coverage hiện tại (verify 30/6):** branch_id **119/244 controller=49%** · database_id **20/244=8%** 🔴 · quyền (RBAC resource.action) có. Hệ bán hàng + 1 phần SX/kho XONG; marketing/LMS/customers/HR/tài chính CSDL chủ yếu CHƯA. ⚠️ vài trang dùng branch ID giả ('HN'/'HCM' thay UUID) → lọc sai.
-> **Đang chạy (chưa xong):** (1) **Workflow audit CSDL+branch+quyền 10 domain** (inventory/manufacturing/hr/finance/marketing/lms/purchasing/ecommerce/master/core) → ra **kế hoạch code chi tiết từng đợt** (sẽ ghi `docs/KE-HOACH-CSDL-BRANCH-QUYEN-TOAN-HE-20260630.md`). (2) **ADR quyền-riêng-từng-ổ** (worker-opus) → `docs/ADR-QUYEN-RIENG-TUNG-O-20260630.md` (schema user×ổ×quyền + resolution + RLS + lộ trình phase).
-> **Vừa làm xong (chưa build/deploy — gom đợt sau):** TOP 1 misa-export (FE: auth token + dropdown kho thật + X-Database-Id) · TOP 2 đối chiếu công nợ (build 2 endpoint `/finance/debts/reconciliation` + FE bỏ mock) · TOP 3 báo cáo ngày (4 tab wire dashboard thật). Backlog 14 trang STUB đã đẩy GitHub erp-orchestration cho mobile.
-> **Bước tiếp CHÍNH XÁC:** (1) Đợi workflow audit + ADR xong → review → trình Letri duyệt kế hoạch + thiết kế. (2) Code TỪNG ĐỢT theo kế hoạch (1 domain/đợt, verify-first, reviewer đối kháng) — thêm database_id+branch_id param+filter controller + FE gửi param + migration ADD COLUMN bảng thiếu + RLS. (3) Sửa branch ID giả → load branches thật. (4) Test local Mac kỹ → gom deploy 1 lần khi domain xong. (5) Phase quyền-riêng-từng-ổ theo ADR (schema→resolution→UI matrix→RLS).
-> **Cạm bẫy:** branch ID giả (HN/HCM) nhiều trang · fail-open NULL (database_id/branch_id rỗng→không lọc) · param FE↔BE khớp tên snake (`branch_id` không `branchId`) · tenant filter KHÔNG bỏ · RBAC đụng bảo mật → reviewer đối kháng 3 vòng + test cross-database không leak.
-> **Hệ khác cần biết:** prod=`831c1bee`. Mobile idle (chưa code) → Opus desktop tự code. mảng này LỚN, làm nhiều đợt nhiều ngày, deploy gom 1 lần/ngày khi từng đợt xong + test kỹ.
+### 🏁 BÀN GIAO MỚI NHẤT ⏰ 2026-06-30 tối (KẾ HOẠCH LỚN: CSDL+branch+quyền TOÀN HỆ + quyền-riêng-từng-ổ + web API + Antigravity) ⭐ ĐỌC KỸ — KHÔNG BỎ SÓT
+> **🎯 DIRECTIVE LETRI:** Hoàn thiện **load theo CSDL + chi nhánh + quyền MỌI hệ/trang/nút/bảng** (Rule 20). Bảng phải có `database_id`+`branch_id`+quyền. **Chia việc THẬT KỸ, code thật kỹ, KHÔNG thiếu sót, KHÔNG để Letri nhắc lại.** Báo tiến độ còn thiếu liên tục → hoàn thiện MỚI deploy 1 lần. **Test local Mac kỹ (api tsc + web build + click-test) rồi mới deploy.** Mô hình quyền: **QUYỀN RIÊNG TỪNG Ổ (như MISA).**
+>
+> **📊 COVERAGE (workflow audit 9 domain 30/6, công thức):** 🗄️ CSDL `databaseFilter` lọc thật **12/64=19%** 🔴 yếu nhất · 🏢 branch lọc thật **35/64=55%** · 🔐 quyền guard mutation **31/64=48%**. Hạ tầng CSDL-scoping ĐÃ CÓ (`databaseFilter()` fail-open, `req.databaseId` từ middleware, mẫu chuẩn `online-orders.controller.ts`) nhưng ít service gọi.
+>
+> **🔴 LỖ HỔNG BẢO MẬT (audit tìm ra — VÁ SỚM, KHÔNG QUÊN):**
+> - **Mua hàng 6/6 controller HỞ QUYỀN** — duyệt PO/hoá đơn theo ngưỡng tiền + match 3-way KHÔNG guard → ai login cũng duyệt (TT99).
+> - **Kho** — `getStock` lộ **GIÁ VỐN** cho mọi NV; 9/13 mutation hở quyền.
+> - **HR** — payroll/salary/payslips/BHXH = **PII+tiền KHÔNG phân quyền** (vi phạm NĐ13+TT99); quyền 3/25.
+> - **LMS** — `courses.controller` KHÔNG 1 @RequirePermissions nào (enroll/create tự do).
+> - **Sàn TMĐT** — `sales-channels` response **LEAK api_key/api_secret** Shopee/Lazada; connect/sync không guard.
+> - ⚠️ Nhiều trang FE dùng **branch ID GIẢ** ('HN'/'HCM' string thay UUID) → lọc chi nhánh SAI âm thầm.
+>
+> **📋 KẾ HOẠCH 9 ĐỢT (XONG, file `docs/KE-HOACH-CSDL-BRANCH-QUYEN-TOAN-HE-20260630.md` — có file:dòng từng việc):** thứ tự ưu tiên rủi ro: **1.Mua hàng**(Opus,quyền 0/6)→**2.Kho**→**3.HR**(PII)→**4.LMS**→**5.Sàn TMĐT**(leak key)→6.Sản xuất→7.KH/SP→8.Marketing→9.Lõi. Quy ước mỗi đợt: thêm guard PHẢI **seed quyền+gán policy TRƯỚC** (không khoá NV 403); CSDL filter đọc `req.databaseId` fail-open; branch `@Query('branch_id')` snake; G4 (bật CSDL diện rộng) code sẵn đặt SAU cổng Letri duyệt. ⚠️ HR domain audit lỗi schema-retry → **audit lại HR riêng** trước khi làm đợt 3.
+>
+> **🔐 ADR QUYỀN-RIÊNG-TỪNG-Ổ (XONG + Letri DUYỆT, file `docs/ADR-QUYEN-RIENG-TUNG-O-20260630.md`):** 🔴 phát hiện **RLS đang DORMANT** (24 mig bật RLS tenant nhưng KHÔNG set_config per request → app chạy owner bỏ qua RLS; lớp chặn THẬT = Guard). Thiết kế: bảng mới `user_database_roles` override theo ổ + fallback role toàn cục (backward-compat, user không set→chạy y cũ). 4 phase: P1 schema(no-op)→P2 resolution+Guard(Opus review,fail-open)→P3 UI matrix→P4 RLS(sau, cần bật RLS tenant thật trước). 5 điểm cần Letri duyệt chi tiết (mục F trong ADR).
+>
+> **🌐 WEB (Letri duyệt 30/6, file `docs/HUONG-DAN-C19-WEB-WECHA-20260630.md`):** web-wecha/nguyenlieuantoan/phache = **Cách A Postgres RIÊNG** (cổng mới vd 5434, cô lập ERP). **API 1 chiều read-only ERP→web** (dùng chung, đọc SP/giá/tồn) + **chiều web→ERP nhận CRM/lead** cho chăm sóc KH. **Dựng hạ tầng web-wecha: ĐÃ DUYỆT** (chưa làm — TODO: Postgres container + folder /opt/web-wecha + Caddy + safe-deploy-web-wecha.sh riêng). 🔒 KHOÁ CỨNG: mọi C cấm đụng ERP/cấm deploy → nộp CEO ERP review → Letri duyệt → CEO ERP deploy script riêng.
+>
+> **🤖 ANTIGRAVITY 5 TÀI KHOẢN GOOGLE PRO (đề xuất, chờ Letri duyệt phân tuyến):** tận dụng token 5 acc Gemini cho **FE/UI rủi-ro-thấp + 3 website** (song song 5 luồng, mỗi acc 1 nhóm file/branch riêng). 🔴 TUYỆT ĐỐI KHÔNG giao BE/migration/quyền/RLS/tài chính (Claude làm) · mọi output → **Opus QC grep-verify TRƯỚC deploy** · ràng buộc `ANTIGRAVITY-CODING-CONTRACT.md`. Việc thử đầu: 3 website.
+>
+> **✅ ĐÃ LIVE prod=`831c1bee`** (sáng+chiều: audit fields + 27 gate + QA wire nút chết + branch_id + nạp thẻ). **CHƯA build/deploy (gom đợt sau):** TOP 1 misa-export FE · TOP 2 đối chiếu công nợ (2 endpoint mới) · TOP 3 báo cáo ngày 4 tab.
+>
+> **⏳ CHỜ LETRI DUYỆT (3 cổng):** (1) Kế hoạch ERP 9 đợt: thứ tự + quy trình seed-quyền-trước + G4 → bắt đầu **Đợt 1 Mua hàng**. (2) Set hạ tầng web + API mockup. (3) Phân tuyến Antigravity.
+> **Bước tiếp khi được duyệt:** Đợt 1 Mua hàng (Opus, seed quyền+gán policy TRƯỚC, +CSDL filter PR/returns/reports, migration purchase_returns ADD database_id) → reviewer 3 vòng (tiền/IDOR/tenant) → test local Mac → trình deploy.
+> **Cạm bẫy:** seed quyền TRƯỚC khi bật guard (Rule 20 mục 2.3, không khoá NV) · branch ID giả HN/HCM · fail-open NULL · param FE↔BE khớp snake `branch_id` · tenant filter KHÔNG bỏ · RBAC/RLS = bảo mật → reviewer đối kháng + test cross-database/cross-ổ không leak · `suppliers`/bảng HUB thiếu database_id cần CEO review trước migration.
+> **Hệ khác:** prod=`831c1bee`. Mobile idle→Opus desktop tự code. Mảng này LỚN nhiều ngày, deploy gom 1 lần/ngày từng đợt xong+test kỹ. Doc đã push erp-orchestration: BACKLOG + KE-HOACH + ADR + HUONG-DAN-C19.
 
 ### 🏁 BÀN GIAO ⏰ 2026-06-30 chiều (QA click-test toàn hệ bán hàng + wire nút chết)
 > **Vừa làm:** Mở agent QA functional rà TỪNG nút thêm/sửa/xoá/duyệt trên 10 trang bán hàng (wire→BE endpoint→gate→3-state) + tiếp code song song:
