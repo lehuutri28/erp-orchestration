@@ -61,6 +61,10 @@
 
 ## 📢 THÔNG BÁO 18C + ĐIỀU PHỐI (mới nhất — ⏰ 2026-06-29 12:51) — 1 NGUỒN DUY NHẤT, không ghi file riêng
 
+- ✅ **C13 POS-V4 glassConfirm() 5 trang — 30/6** (commit `ca1f6ad`, `clasp push` done): Hoàn thiện Rule 20 (CẤM window.confirm/alert — Glass UI thống nhất). Fix 5 trang dùng `document.createElement` custom overlay thay vì global `glassConfirm()`: `06-ThuChi.html` · `08-Menu.html` (xoá cả `showGlassConfirmMenu()`) · `15-NguoiDung.html` · `16-ChiNhanh.html` · `19-NhaCungCap.html`. **0 custom overlay còn lại**. **Gap còn (cần CEO ERP):** 17-PhanQuyen.html — stub rỗng, cần BE `/v1/admin/roles` + `/v1/admin/permissions`.
+
+- ✅ **C13 POS-V4 AUDIT HOÀN THIỆN + FIX GAP — 30/6 12:24** (`clasp push` 43 files, commit `b84856c`): Tự audit toàn bộ 20 trang GAS POS V4 theo Rule 20 (Load/Lọc/Thêm/Sửa/Xoá/Excel × CSDL/Chi nhánh/Quyền). Kết quả: **118/160 ✅ đủ, 6 ⚠️ có chưa đủ, 5 ❌ thiếu**. **FIX 1 gap:** 14-Chuoi.html thêm `chExportCsv()` — nút "Xuất Excel" enable sau khi tất cả chi nhánh load xong (cache `_chStatsCache` per branchId); cột: Chi nhánh/Địa chỉ/Doanh thu/Số đơn/Số khách/TB đơn/Kỳ. **Gap Sprint sau (cần BE endpoint):** 17-PhanQuyen.html — 100% stub, `onMount_phanquyen` rỗng, nút "Tạo vai trò mới" disabled — cần `/v1/admin/roles` + `/v1/admin/permissions` backend. ⚠️ Letri: mở 14-Chuoi → đổi kỳ → sau khi load xong, nút "Xuất Excel" sáng lên → bấm OK.
+
 - ✅ **C13 POS-V4 FE ROLE-GATING — 29/6 12:51** (`clasp push` 43 files): Phân quyền giao diện GAS SPA theo vai trò NV. Thêm `staff_forLogin()` (NhanVienUI.js:241) — NV active + chi nhánh, không có password_hash. Modal chọn NV (`#staff-selector-overlay`) hiện khi mở app sau setup. User bar drawer (`#drawer-user-bar`) hiện tên+vai trò+chi nhánh+🔄. JS: `applyRoleUI(role)` ẩn sidebar theo `ROLE_HIDE` map; `cashier` ẩn 10 mục (thue/thuchi/baocao/baocaoton/chuoi/nguoidung/chinhanh/phanquyen/caidat/tichHop); `staff` ẩn thêm nhacungcap/congthuc/kho. Load handler sửa: sau `isSetupDone:true` → `showStaffSelector()` thay vì `navigateTo(page)` trực tiếp. ⚠️ Letri test: mở POS URL → modal NV hiện đúng; thêm NV test role cashier → sidebar bị ẩn đúng. Cạm bẫy: tên NV có dấu nháy đơn `'` có thể lỗi onclick (cần escape thêm nếu gặp).
 
 - ✅ **C4 MOBILE 20/6** (commit `5787c19`): 9 fix mobile — modal zIndex 50→1050 (TCModal/TaoDeNghiTT/ThemButToan), close btn 32→44px, KPI auto-fit minmax(140px), layout split collapse 1 cột @767px, bảng 7-10 cột overflow-x. tsc 0 error. XIN-DUYET viết rồi, chờ Opus QC.
@@ -174,7 +178,24 @@
 
 ## 7. 📋 BÀN GIAO CHO SESSION SAU (Opus CEO ERP) ⭐ ĐỌC ĐẦU TIÊN
 
-### 🏁 BÀN GIAO MỚI NHẤT ⏰ 2026-06-30 (tiếp hệ bán hàng dang dở — audit fields + gate quyền)
+### [C13-POS-FNB-V4] BÀN GIAO ⏰ 2026-06-30 — glassConfirm() 5 trang, GAS LIVE (session 13)
+- **Vừa làm:** Fix 5 trang còn dùng `document.createElement` custom overlay cho delete confirm (vi phạm Rule 20 "CẤM window.confirm/alert/prompt"): `06-ThuChi.html` `deleteTcPhieu()`, `08-Menu.html` `deleteMenuItem()` (xoá hẳn `showGlassConfirmMenu()` 13 dòng), `15-NguoiDung.html` `nd_delete()`, `16-ChiNhanh.html` `cn_delete()`, `19-NhaCungCap.html` `nccDelete()`. Tất cả thay bằng `glassConfirm(msg, fn)` global.
+- **Dừng tại:** commit `ca1f6ad` trên branch `feat/bank-reconciliation`. `clasp push` thành công (43 files). GAS LIVE. 0 custom overlay còn lại (grep verify sạch).
+- **Bước tiếp CHÍNH XÁC:** Gap duy nhất còn lại trong C13 scope: `17-PhanQuyen.html` — `onMount_phanquyen = function(){}` rỗng 100%. Cần CEO ERP cung cấp BE endpoints `/v1/admin/roles` + `/v1/admin/permissions` (GET list + POST create + DELETE). Sau khi BE sẵn: C13 wire FE vào.
+- **Cạm bẫy:** GAS cross-origin iframe — không test automation được. Letri/Anh Tuấn phải test tay: mở POS → bấm nút xoá trên 1 trong 5 trang → phải thấy Glass dialog (KHÔNG phải native browser confirm). Nếu modal không hiện: `ApiClientJs.html:406` `function glassConfirm` phải tồn tại.
+- **Hệ khác cần biết:** Không thay đổi BE VPS. Chỉ GAS FE. `pm2 restart phache-api` (KHÔNG phải `pos-api`).
+
+### 🏁 BÀN GIAO MỚI NHẤT ⏰ 2026-06-30 chiều (QA click-test toàn hệ bán hàng + wire nút chết)
+> **Vừa làm:** Mở agent QA functional rà TỪNG nút thêm/sửa/xoá/duyệt trên 10 trang bán hàng (wire→BE endpoint→gate→3-state) + tiếp code song song:
+> - **QA bắt nút chết THẬT:** b2b "Xuất hoá đơn VAT" + "In đơn" = alert giả (không gọi endpoint dù BE có); debt-payment gửi `credit_offset` sai DTO (422 câm); `/admin/giftcards` = trang duplicate chết; nút Kích hoạt PENDING dead-path; generate-codes không reload; ~11 nút chưa gate; "Nhận cọc" thiếu ở sales/reservations; reservations "Chuyển đơn bán" chỉ đổi cờ KHÔNG tạo order (Letri CHƯA duyệt → để sau).
+> - **Slice-3** (commit `73a69356`): nút **Nạp thẻ** gift-card (recharge BE đã có) + branch_id filter FE + render tên KH. Verify-first: branch_id/export/recharge/customerName BE đã có → chỉ thêm FE.
+> - **QA-fix batch** (commit `4f2c20da`): VAT export + In đơn **wire thật** (esc HTML chống XSS, đã-trả=total−debt) + bỏ credit_offset + giftcards redirect + ẩn PENDING + 11 PermissionGate (key verify theo BE) + Nhận cọc + reload generate.
+> **Dừng tại:** 2 commit (`73a69356`,`4f2c20da`) trên prod `c8edb6cf`, **clean build web PASS** (webpack 0 lỗi), reviewer PASS (2 Major paidAmount+XSS đã fix). **CHỜ DEPLOY** — code-only KHÔNG migration.
+> **Bước tiếp CHÍNH XÁC:** (1) Deploy: `cd /Users/letri/Projects/erp-project && bash scripts/safe-deploy.sh n8n/005-wecha-pos-zalo-keypos` (disk 74%, chỉ YES DEPLOY; KHÔNG apply SQL). (2) ⚠️ **VAT export chỉ kiểm điều kiện, CHƯA đẩy MISA meInvoice** — tích hợp MISA là việc lớn riêng. (3) **reservations "Chuyển đơn bán" tạo order thật** (saga) — chưa duyệt, làm sau. (4) Bảo mật: đổi pass DB + confirm repo private. (5) Click-test browser thật cần bật extension "Claude in Chrome" trên erp.wecha.vn.
+> **Cạm bẫy:** reviewer bắt 2 Major phiếu In (paidAmount không tồn tại schema + XSS document.write) → ĐÃ fix. Luôn reviewer trước deploy. Gate FE key đều khớp BE đã seed (0429/0431).
+> **Hệ khác cần biết:** sau deploy prod = `4f2c20da`. erp-orchestration PROGRESS sync (scrub).
+
+### 🏁 BÀN GIAO ⏰ 2026-06-30 sáng (tiếp hệ bán hàng dang dở — audit fields + gate quyền)
 > **Vừa làm:** Tiếp 2 slice hoàn thiện bán hàng (Rule 20), verify-first từng bước (không rush):
 > - **Slice 1 — người tạo/duyệt/xoá** (commit `796a7ac8`, reviewer PASS 0 blocker): khai cột Drizzle `quotes.deletedBy/deletedReason` + `commerce_reservations.approvedBy/approvedAt` (0431 đã thêm ở DB); set `createdBy` (promotions/gift-card/voucher), `approvedBy/approvedAt` (reservations khi confirm), `deletedBy/deletedReason` (quotes khi xoá, reason qua query param). userId từ `req.user.sub`.
 > - **Slice 2 — ẩn/hiện 27 nút theo quyền** (commit `c8edb6cf`, reviewer 2 vòng): 7 trang (orders/pending-approval/quotes/b2b/vouchers-campaigns/returns). Key verify theo BE `@RequirePermissions` (orders.cancel/edit/approve/reject/export_vat, quotes.edit/approve/reject/convert/delete, **online_orders.confirm**, vouchers.manage/delete, returns.approve/reject/delete). Reviewer vòng 1 bắt **9 nút sót** (bulk-confirm/bulk-status/convert/advance/online-confirm/returns-delete) → worker fix → vòng 2 PASS. `'*'` toàn quyền vẫn thấy hết.
@@ -190,6 +211,13 @@
 > **Cạm bẫy:** 🔴 **KIỂM THẬT KỸ, KHÔNG ĐOÁN** (Letri nhắc 2 lần) — verify-existing-first (đã rush bung products/customers TRÙNG, phải revert). Bulk endpoint NHIỀU cái ĐÃ CÓ (customers 9 bulk, orders bulk-confirm/shipping, returns bulk-approve/reject, gift-cards bulk-issue) → REUSE đừng tạo trùng. 💀 giảm-giá-% là bug SAI TIỀN. 0429/0431 chưa apply. ĐỢT3 + 5 worker = UNCOMMITTED/UNREVIEWED.
 > **Hệ khác cần biết:** mig đã apply prod: 0427/0428 (đợt7), 0430 (backfill). Chưa apply: 0429, 0431. org-scoping data gap (ổ Nhà Máy tắt + truongngocsau role=Admin chưa scoped — chờ Letri model). Repo `erp-orchestration` đồng bộ tay (curate→scrub→push khi luật/PROGRESS đổi).
 
+
+### [C13-POS-FNB-V4] BÀN GIAO ⏰ 2026-06-30 — Commit timezone + CSV field aliases, GAS đã LIVE (session 12)
+- **Vừa làm:** Commit `b2bf4d7` — 4 file uncommitted từ session 10 chưa vào git: (1) SheetIO.js: thêm `_nowVN_()` + `_todayVN_()` helper, fix timezone 5 chỗ (createCustomer/ThuChi/Supplier/Staff/orderDraft); (2) KhoUI.js: fix timezone kho_nhap + kho_xuat; (3) 04-KhuyenMai.html: CSV export thêm fallback `km.ten_km`; (4) 19-NhaCungCap.html: CSV export thêm fallback `n.id_nguyenlieu`. `clasp push` → "Script is already up to date" (session 10 đã push, chỉ sync git).
+- **Dừng tại:** git HEAD = `b2bf4d7` (trên branch `feat/bank-reconciliation`). GAS LIVE = đầy đủ role-gating + timezone VN + Excel export toàn bộ trang.
+- **Bước tiếp CHÍNH XÁC:** (1) Letri/Anh Tuấn mở URL POS `/dev` → test 8 kịch bản role-gating: App load→modal NV; danh sách NV + role badge; chọn cashier→ẩn 10 menu; chọn staff→ẩn 13 menu; chọn admin→đủ menu; drawer hiện tên+role+chi nhánh; nút 🔄 mở lại modal; "Tiếp tục với quyền Admin". (2) Letri chạy `pm2 restart phache-api` trên VPS phache để fix 502 BE (nếu chưa).
+- **Cạm bẫy:** GAS SPA trong cross-origin iframe → không test tự động. Nếu modal không hiện: kiểm tra sheet NguoiDung có NV trạng thái "Đang làm" không. `pm2 restart phache-api` (KHÔNG phải `pos-api`).
+- **Hệ khác cần biết:** Không có thay đổi VPS. C13 scope chỉ GAS.
 
 ### [C13-POS-FNB-V4] BÀN GIAO ⏰ 2026-06-29 — Role-gating UI + Staff selector modal (session 11)
 - **Vừa làm:** Implement hoàn chỉnh phân quyền UI theo vai trò cho GAS POS (anh-tuan instance). 2 file thay đổi:
